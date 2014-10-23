@@ -16,8 +16,9 @@ function Authenticate(key, chunkSize) {
   this._chunkSize = chunkSize || 512;
   this._algo = 'sha256';
   var self = this;
-  crypto.pbkdf2(key, salt, 500, 32, function (err, iv) {
-    self._iv = iv;
+  crypto.pbkdf2(key, salt, 500, 48, function (err, iv) {
+    self._iv = iv.slice(0, 32);
+    self._endTag = iv.slice(32);
     var hmac = crypto.createHmac(self._algo, self._iv);
     var chunk = new Buffer(4);
     chunk.writeUInt32BE(self._chunkSize, 0);
@@ -42,23 +43,21 @@ Authenticate.prototype._transform = function (chunk, _, next) {
   return this._drainCache(next);
 };
 Authenticate.prototype._drainCache = function (next) {
-  var chunk, hmac;
-  while (this._cache.length > this._chunkSize) {
+  var chunk, hmac, out;
+  while (this._cache.length >= this._chunkSize) {
     chunk = this._cache.slice(0, this._chunkSize);
     this._cache = this._cache.slice(this._chunkSize);
     hmac = crypto.createHmac(this._algo, this._iv);
     hmac.update(chunk);
-    this.push(hmac.digest());
+    out = hmac.digest();
+
+    this.push(out);
     this.push(chunk);
     incr32(this._iv);
   }
   next();
 };
 Authenticate.prototype._flush = function (next) {
-  if (!this._cache.length) {
-    fill(this._iv, 0);
-    return next();
-  }
   var self = this;
   if (!this._iv) {
     return this.once('iv-ready', function () {
@@ -68,9 +67,12 @@ Authenticate.prototype._flush = function (next) {
   var chunk = this._cache;
   var hmac = crypto.createHmac(this._algo, this._iv);
   hmac.update(chunk);
-  this.push(hmac.digest());
+  hmac.update(this._endTag);
+  var out = hmac.digest();
+  this.push(out);
   this.push(chunk);
   fill(this._iv, 0);
+  fill(this._endTag, 0);
   next();
 };
 exports.Verify = Verify;
@@ -97,11 +99,12 @@ function Verify(password) {
     }
   });
   this._makeIv = function (salt, cb) {
-    crypto.pbkdf2(password, salt, 500, this._saltLen, function (err, resp) {
+    crypto.pbkdf2(password, salt, 500, 48, function (err, resp) {
       if (err) {
         return cb(err);
       }
-      self._iv = resp;
+      self._iv = resp.slice(0, 32);
+      self._endTag = resp.slice(32);
       cb();
     });
   };
@@ -133,7 +136,7 @@ Verify.prototype._drainCache = function (next) {
   }
   var blockSize = this._chunkSize + this._hashSize;
   var chunk, hmac, hash, outHash;
-  while (this._cache.length > blockSize) {
+  while (this._cache.length >= blockSize) {
     hash = this._cache.slice(0, this._hashSize);
     chunk = this._cache.slice(this._hashSize, blockSize);
     this._cache = this._cache.slice(blockSize);
@@ -171,18 +174,15 @@ Verify.prototype._flush = function (next) {
   if (this._error) {
     return next();
   }
-  if (!this._cache.length) {
+  if (this._cache.length < this._hashSize) {
     fill(this._iv, 0);
-    return next();
-  }
-  if (this._cache.length <= this._hashSize) {
-    fill(this._iv, 0);
-    return new Error('missing data');
+    return next(new Error('missing data'));
   }
   var hash = this._cache.slice(0, this._hashSize);
   var chunk = this._cache.slice(this._hashSize);
   var hmac = crypto.createHmac(this._algo, this._iv);
   hmac.update(chunk);
+  hmac.update(this._endTag);
   var outHash = hmac.digest();
   if (compare(hash, outHash)) {
     fill(this._iv, 0);
