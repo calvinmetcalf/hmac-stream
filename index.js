@@ -13,7 +13,7 @@ function Authenticate(key, chunkSize) {
   this.push(salt);
   this._cache = new Buffer('');
   this._iv = void 0;
-  this._chunkSize = chunkSize || 8 * 1024;
+  this._chunkSize = chunkSize || 512;
   this._algo = 'sha256';
   var self = this;
   crypto.pbkdf2(key, salt, 500, 32, function (err, iv) {
