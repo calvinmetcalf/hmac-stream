@@ -3,7 +3,7 @@ var Transform = require('readable-stream').Transform;
 var inherits = require('inherits');
 exports.Authenticate = Authenticate;
 inherits(Authenticate, Transform);
-function Authenticate(key, chunkSize) {
+function Authenticate(key, maxChunkSize, minChunkSize) {
   if (!(this instanceof Authenticate)) {
     return new Authenticate(key);
   }
@@ -13,8 +13,8 @@ function Authenticate(key, chunkSize) {
   this.push(salt);
   this._cache = new Buffer('');
   this._iv = void 0;
-  this._minChunkSize = 16;
-  this._maxChunkSize = chunkSize || 512;
+  this._minChunkSize = minChunkSize || 16;
+  this._maxChunkSize = maxChunkSize || 4 * 1024;
   this._algo = 'sha256';
   var self = this;
   crypto.pbkdf2(key, salt, 500, 48, function (err, iv) {

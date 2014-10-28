@@ -18,11 +18,15 @@ This module works to authenticate by:
 - chunk size is treated as additional authenticated data, so an hmac (using the iv) is generated and emitted followed by the chunk size
 - the iv is incremented by 1
 - for each chunk of data
-    - generate and emit hmac
+    - generate and emit header which is
+        - 1 byte which represents whether it is the end or not
+        - 4 bytes which represents the chunk length
+    - generate and emit hmac for header plus chunk
     - emit data
     - increment iv by 1
 - for the last chunk of data
-  - generate the hmac with hmac(data + end tag)
+  - generate header with first byte set to 1
+  - generate the hmac with hmac(header + data + end tag)
   - emit hmac then data
   - fill the iv and the end tag with zeros
 
@@ -30,10 +34,11 @@ to verify:
 
 - treat the first 32 bytes of the stream as a salt
 - use that to calculate iv and end tag
-- next 32 bytes is the hmac for the block size followed by the block size
+- next 32 bytes is the hmac for the max block size followed by the max block size
 - verify the block size and throw an error if it doesn't match
 - increment the iv
 - for each chunk of data
+    - if chunk size is larger then max block size throw error
     - generate and check hmac
     - if it matches
         - emit data
@@ -55,17 +60,17 @@ It should throw errors if
 ```js
 var hmacStream = require('hmac-stream');
 
-createCipher.Authenticate(password, chunkSize = 512);
+createCipher.Authenticate(password, maxChunkSize=4*1024, minChunkSize=16);
 createCipher.Verify(password);
 ```
 
 - password: will be passed to `crypto.pbkdf2`
-- chunkSize: the amount of data to cover by one hmac. 
-
-The hmac adds an overhead of 32 bytes per chunk and is always emitted before the chunk, since data will only be emitted in chunks of this size it is important to lower this number for streams where throughput speed is more important then size.  As it is set by default you need to write 512 worth of data before it will emit anything (or close the stream), this is a compromise between overhead (default is 6% per chunk) and though put for situations where you are reading a stream quickly in one quick shot (e.g. fs.createReadStream) you may want to increase this but if you have a stream where small bits of data come over a longer period of time you'd want to set this lower, for instance if you had a a tcp stream which gets 50 bytes every minute, then by default you'd get a burst of data every 10 minutes.
+- maxChunkSize: the max amount of data covered by an hmac, up to this amount of data is cached before the hmac is checked so think of this as the maximum amount of fake data an attacker can waste your time with before you notice.
+- minChunkSize: the minimum amount of data to wait for until sending a chunk, the hmac and headers add an overhead of 37 bytes per chunk so if data is coming in in drips and drabs then we might want to wait before emitting data. By default set to 16 bytes which is the block size of AES, can be set to 1 to turn off.
 
 
 # Versions
 - 0.0.0: first version
 - 0.1.0: lowered default chunk size.
 - 1.0.0: add end tag to guard against the last block being dropped
+- 2.0.0: added variable block sizes
