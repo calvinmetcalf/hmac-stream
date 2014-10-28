@@ -145,7 +145,7 @@ test('errors if the chunks are swaped', function (t) {
   }).on('finish', function () {
     t.equals(out.toString('hex'), data1.toString('hex'), 'did not emit too much');
   }).on('error', function (e) {
-    t.equals(e.message, 'bad data', 'should error');
+    t.equals(e.message, 'invalid block size', 'should error');
   });
   var auterData  = new Buffer('');
   var ended = false;
@@ -186,9 +186,9 @@ test('works with small chunk size', function (t) {
   var out = '';
   val.on('data', function (d) {
     out += d.toString();
-  }).on('finish', function () {
+  }).on('end', function () {
     t.ok(auterData.length > 1000, 'correct length');
-    t.equals(data, out);
+    t.equals(out, data);
   });
   var auterData = new Buffer('');
   auther.pipe(val);
