@@ -3,18 +3,24 @@ var Transform = require('readable-stream').Transform;
 var inherits = require('inherits');
 exports.Authenticate = Authenticate;
 inherits(Authenticate, Transform);
-function Authenticate(key, maxChunkSize, minChunkSize) {
+function Authenticate(key, opts) {
   if (!(this instanceof Authenticate)) {
-    return new Authenticate(key);
+    return new Authenticate(key, opts);
   }
-    Transform.call(this);
+  Transform.call(this);
   var saltLen = 16;
   var salt = crypto.randomBytes(saltLen);
   this.push(salt);
   this._cache = new Buffer('');
   this._iv = void 0;
-  this._minChunkSize = minChunkSize || 16;
-  this._maxChunkSize = maxChunkSize || 4 * 1024;
+  if (typeof opts === 'number') {
+    opts = {
+      max: opts
+    };
+  }
+  opts = opts || {};
+  this._minChunkSize = opts.min || 16;
+  this._maxChunkSize = opts.max || 4 * 1024;
   this._algo = 'sha256';
   var self = this;
   crypto.pbkdf2(key, salt, 500, 48, function (err, iv) {
@@ -50,7 +56,7 @@ Authenticate.prototype._drainCache = function (next) {
     this._cache = this._cache.slice(this._maxChunkSize);
     this._sendChunk(chunk);
   }
-  if (this._cache.length >= this._minChunkSize) {
+  if (this._cache.length) {
     chunk = this._cache;
     this._cache = new Buffer('');
     this._sendChunk(chunk);

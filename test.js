@@ -47,7 +47,51 @@ test('works2', function (t) {
   auther.write(data2);
   auther.end();
 });
-
+function getBuffer(len) {
+  var b = new Buffer(len);
+  b.fill(len);
+  return b;
+}
+test('min size', function (t) {
+  t.test('should work', function (t) {
+    t.plan(2);
+    var key = new Buffer('calvin');
+    var auther = new auth.Authenticate(key);
+    var i = 3;
+    var out = [];
+    auther.on('data', function (d) {
+      out.push(d);
+      if (!(--i)) {
+        auther.write(getBuffer(8), function () {
+          t.equals(out.length, 3, 'nothing in there');
+          testing = true;
+          auther.write(getBuffer(9), function () {
+            t.equals(out.length, 6, 'something in there');
+          });
+        });
+      }
+    });
+  });
+  t.test('should be able to turn it off', function (t) {
+    t.plan(2);
+    var key = new Buffer('calvin');
+    var auther = new auth.Authenticate(key, {min: 1});
+    var i = 3;
+    var out = [];
+    auther.on('data', function (d) {
+      out.push(d);
+      if (!(--i)) {
+        auther.write(getBuffer(8), function () {
+          t.equals(out.length, 6, 'nothing in there');
+          testing = true;
+          auther.write(getBuffer(9), function () {
+            t.equals(out.length, 9, 'something in there');
+          });
+        });
+      }
+    });
+  });
+});
 test('errors if the last chunk is lost', function (t) {
   t.plan(1);
   var data1 = new Buffer(16);

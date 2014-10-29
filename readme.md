@@ -60,13 +60,14 @@ It should throw errors if
 ```js
 var hmacStream = require('hmac-stream');
 
-createCipher.Authenticate(password, maxChunkSize=4*1024, minChunkSize=16);
+createCipher.Authenticate(password, chunksize={max: 4*1024, min: 16});
 createCipher.Verify(password);
 ```
 
 - password: will be passed to `crypto.pbkdf2`
-- maxChunkSize: the max amount of data covered by an hmac, up to this amount of data is cached before the hmac is checked so think of this as the maximum amount of fake data an attacker can waste your time with before you notice.
-- minChunkSize: the minimum amount of data to wait for until sending a chunk, the hmac and headers add an overhead of 37 bytes per chunk so if data is coming in in drips and drabs then we might want to wait before emitting data. By default set to 16 bytes which is the block size of AES, can be set to 1 to turn off.
+- chunksize: the max and min sizes of chunks, if a number is passed here it is assumed to be the max.
+    - max: the max amount of data covered by an hmac, up to this amount of data is cached before the hmac is checked so think of this as the maximum amount of fake data an attacker can waste your time with before you notice. When buffers of larger then this are written to the stream they are chopped up into chunks smaller then the max size.
+    - min: the minimum amount of data to wait for until sending a chunk, the hmac and headers add an overhead of 37 bytes per chunk so if data is coming in in drips and drabs then we might want to wait before emitting data. By default set to 16 bytes which is the block size of AES, can be set to 1 to turn off (and should be for use with stream ciphers).
 
 
 # Versions
