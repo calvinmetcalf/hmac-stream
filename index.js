@@ -163,7 +163,7 @@ Verify.prototype._drainCache = function (next, final) {
     return this._getChunkSize(next, final);
   }
   var chunk, hmac, hash, outHash;
-  if (this._cache.length > this._maxChunkSize) {
+  if (this._chunkSize > this._maxChunkSize) {
     return next(new Error('too much data'));
   }
   if (this._final && !final) {
