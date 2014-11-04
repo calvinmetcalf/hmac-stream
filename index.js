@@ -1,6 +1,7 @@
 var crypto = require('crypto');
 var Transform = require('readable-stream').Transform;
 var inherits = require('inherits');
+var immediate = require('immediate');
 exports.Authenticate = Authenticate;
 inherits(Authenticate, Transform);
 function Authenticate(key, opts) {
@@ -194,7 +195,7 @@ Verify.prototype._drainCache = function (next, final) {
   if (final) {
     fill(this._iv, 0);
   } else if (this._cache.length) {
-    return process.nextTick(function () {
+    return immediate(function () {
       self._drainCache(next);
     });
   }
@@ -246,7 +247,6 @@ Verify.prototype._flush = function (next) {
     return next();
   }
   this._drainCache(next, true);
-  next();
 };
 function incr32(iv) {
   var len = iv.length;
