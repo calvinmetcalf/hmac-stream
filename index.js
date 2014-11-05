@@ -190,6 +190,11 @@ Verify.prototype._drainCache = function (next, final) {
     }
     this.push(chunk);
     incr32(this._iv);
+  } else {
+    if (final) {
+      fill(this._iv, 0);
+    }
+    return next();
   }
   var self = this;
   if (final) {
