@@ -19,8 +19,8 @@ This module works to authenticate by:
 - the iv is incremented by 1
 - for each chunk of data
     - generate and emit header which is
-        - 1 byte which represents whether it is the end or not
         - 4 bytes which represents the chunk length
+        - msb designates it is an end chunk
     - generate and emit hmac for header plus chunk
     - emit data
     - increment iv by 1

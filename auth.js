@@ -24,10 +24,9 @@ function Authenticate(key, opts) {
   this._maxChunkSize = opts.max || 4 * 1024;
   this._algo = 'sha256';
   var self = this;
-  var iv = crypto.pbkdf2Sync(key, salt, 500, 48);
+  var iv = crypto.pbkdf2Sync(key, salt, 500, 32);
   this.setupIv = function (cb) {
-    self._iv = iv.slice(0, 32);
-    self._endTag = iv.slice(32);
+    self._iv = iv;
     var hmac = crypto.createHmac(self._algo, self._iv);
     var chunk = new Buffer(4);
     chunk.writeUInt32BE(self._maxChunkSize, 0);
@@ -71,7 +70,7 @@ Authenticate.prototype._sendChunk = function (chunk, final) {
     var header = new Buffer(4);
     header.writeUInt32BE(chunk.length, 0);
     if (final) {
-      hmac.update(this._endTag);
+      //hmac.update(this._endTag);
       header[0] += 128;
     }
 
@@ -93,6 +92,5 @@ Authenticate.prototype._flush = function (next) {
   }
   this._sendChunk(this._cache, true);
   utils.fill(this._iv, 0);
-  utils.fill(this._endTag, 0);
   next();
 };

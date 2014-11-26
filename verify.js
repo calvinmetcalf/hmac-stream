@@ -28,9 +28,8 @@ function Verify(password) {
     }
   });
   this._makeIv = function (salt, cb) {
-    var resp = crypto.pbkdf2Sync(password, salt, 500, 48);
-    self._iv = resp.slice(0, 32);
-    self._endTag = resp.slice(32);
+    var resp = crypto.pbkdf2Sync(password, salt, 500, 32);
+    self._iv = resp;
     cb();
   };
 }
@@ -91,7 +90,7 @@ Verify.prototype._drainCache = function (next, final) {
     this._chunkSize = void 0;
     hmac = crypto.createHmac(this._algo, this._iv);
     if (final) {
-      hmac.update(this._endTag);
+      //hmac.update(this._endTag);
     }
     hmac.update(this._chunkBuf);
     this._chunkBuf = void 0;
