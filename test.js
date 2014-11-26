@@ -61,16 +61,11 @@ test('min size', function (t) {
     var out = [];
     auther.on('data', function (d) {
       out.push(d);
-      if (!(--i)) {
-        auther.write(getBuffer(8), function () {
-          t.equals(out.length, 3, 'nothing in there');
-          testing = true;
-          auther.write(getBuffer(9), function () {
-            t.equals(out.length, 6, 'something in there');
-          });
-        });
-      }
     });
+    auther.write(getBuffer(8));
+    t.equals(out.length, 1, 'nothing in there');
+    auther.write(getBuffer(9));
+    t.equals(out.length, 6, 'something in there');
   });
   t.test('should be able to turn it off', function (t) {
     t.plan(2);
@@ -80,21 +75,16 @@ test('min size', function (t) {
     var out = [];
     auther.on('data', function (d) {
       out.push(d);
-      if (!(--i)) {
-        auther.write(getBuffer(8), function () {
-          t.equals(out.length, 6, 'nothing in there');
-          testing = true;
-          auther.write(getBuffer(9), function () {
-            t.equals(out.length, 9, 'something in there');
-          });
-        });
-      }
     });
+    auther.write(getBuffer(8));
+    t.equals(out.length, 6, 'nothing in there');
+    auther.write(getBuffer(9));
+    t.equals(out.length, 9, 'something in there');
   });
 });
 test('errors if the last chunk is lost', function (t) {
   t.plan(1);
-  var data1 = new Buffer(16);
+  var data1 = new Buffer(32);
   data1.fill(8);
   var data2 = new Buffer(16);
   data2.fill(4);
@@ -268,7 +258,7 @@ function manipulateData(name, trans) {
       var out = '';
       var error = false;
       val.on('data', function (d) {
-      }).on('finish', function () {
+      }).on('end', function () {
         t.ok(true, 'done');
       }).on('error', function (e) {
         error = true;
@@ -298,7 +288,7 @@ function manipulateData(name, trans) {
       var out = '';
       var error = false;
       val.on('data', function (d) {
-      }).on('finish', function () {
+      }).on('end', function () {
         t.ok(true, 'done');
       }).on('error', function (e) {
         error = true;
@@ -328,7 +318,7 @@ function manipulateData(name, trans) {
       var out = '';
       var error = false;
       val.on('data', function (d) {
-      }).on('finish', function () {
+      }).on('end', function () {
         t.ok(true, 'done');
       }).on('error', function (e) {
         error = true;
@@ -336,8 +326,10 @@ function manipulateData(name, trans) {
       });
       var i = 0;
       auther.on('data', function (d) {
+        //console.log(i, d.toString('hex'));
         if (++i === 1) {
           d = trans(d);
+          //console.log('trans', d.toString('hex'));
         }
         if (error) {
           return;
