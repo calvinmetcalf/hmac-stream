@@ -5,7 +5,8 @@ var auth = require('./');
 test('works', function (t) {
   t.plan(2);
   var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
-  var key = new Buffer('calvin');
+  var key = new Buffer(16);
+  key.fill(8);
   var auther = new auth.Authenticate(key);
   var val = new auth.Verify(key);
   var out = '';
@@ -29,7 +30,8 @@ test('works2', function (t) {
   data1.fill(8);
   var data2 = new Buffer(16);
   data2.fill(4);
-  var key = new Buffer('calvin');
+  var key = new Buffer(16);
+  key.fill(8);
   var auther = new auth.Authenticate(key, 16);
   var val = new auth.Verify(key);
   var out = '';
@@ -55,7 +57,8 @@ function getBuffer(len) {
 test('min size', function (t) {
   t.test('should work', function (t) {
     t.plan(2);
-    var key = new Buffer('calvin');
+    var key = new Buffer(16);
+    key.fill(8);
     var auther = new auth.Authenticate(key);
     var i = 3;
     var out = [];
@@ -69,7 +72,8 @@ test('min size', function (t) {
   });
   t.test('should be able to turn it off', function (t) {
     t.plan(2);
-    var key = new Buffer('calvin');
+    var key = new Buffer(16);
+    key.fill(8);
     var auther = new auth.Authenticate(key, {min: 1});
     var i = 3;
     var out = [];
@@ -88,7 +92,8 @@ test('errors if the last chunk is lost', function (t) {
   data1.fill(8);
   var data2 = new Buffer(16);
   data2.fill(4);
-  var key = new Buffer('calvin');
+  var key = new Buffer(16);
+  key.fill(8);
   var auther = new auth.Authenticate(key, 16);
   var val = new auth.Verify(key);
   var out = new Buffer('');
@@ -127,7 +132,8 @@ test('errors if the last chunk is swapped', function (t) {
   data1.fill(8);
   var data2 = new Buffer(16);
   data2.fill(4);
-  var key = new Buffer('calvin');
+  var key = new Buffer(16);
+  key.fill(8);
   var auther = new auth.Authenticate(key, 16);
   var val = new auth.Verify(key);
   var out = new Buffer('');
@@ -170,7 +176,8 @@ test('errors if the chunks are swaped', function (t) {
   data3.fill(6);
   var data4 = new Buffer(16);
   data3.fill(8);
-  var key = new Buffer('calvin');
+  var key = new Buffer(16);
+  key.fill(8);
   var auther = new auth.Authenticate(key, 16);
   var val = new auth.Verify(key);
   var out = new Buffer('');
@@ -214,7 +221,8 @@ test('errors if the chunks are swaped', function (t) {
 test('works with small chunk size', function (t) {
   t.plan(2);
   var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
-  var key = new Buffer('calvin');
+  var key = new Buffer(16);
+  key.fill(8);
   var auther = new auth.Authenticate(key, 16);
   var val = new auth.Verify(key);
   var out = '';
@@ -252,7 +260,8 @@ function manipulateData(name, trans) {
     t.test('bad data', function (t) {
       t.plan(2);
       var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
-      var key = new Buffer('calvin');
+      var key = new Buffer(16);
+      key.fill(8);
       var auther = new auth.Authenticate(key);
       var val = new auth.Verify(key);
       var out = '';
@@ -282,7 +291,8 @@ function manipulateData(name, trans) {
     t.test('bad chunk size', function (t) {
       t.plan(2);
       var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
-      var key = new Buffer('calvin');
+      var key = new Buffer(16);
+      key.fill(8);
       var auther = new auth.Authenticate(key);
       var val = new auth.Verify(key);
       var out = '';
@@ -312,7 +322,8 @@ function manipulateData(name, trans) {
     t.test('bad salt', function (t) {
       t.plan(2);
       var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
-      var key = new Buffer('calvin');
+      var key = new Buffer(16);
+      key.fill(8);
       var auther = new auth.Authenticate(key);
       var val = new auth.Verify(key);
       var out = '';
@@ -344,7 +355,8 @@ function manipulateData(name, trans) {
     t.test('bad hash', function (t) {
       t.plan(2);
       var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
-      var key = new Buffer('calvin');
+      var key = new Buffer(16);
+      key.fill(8);
       var auther = new auth.Authenticate(key);
       var val = new auth.Verify(key);
       var out = '';

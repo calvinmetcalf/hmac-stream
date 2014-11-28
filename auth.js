@@ -4,78 +4,53 @@ var inherits = require('inherits');
 var utils = require('./utils');
 module.exports = Authenticate;
 inherits(Authenticate, Transform);
-function Authenticate(key, opts) {
+function Authenticate(key, aad, max) {
   if (!(this instanceof Authenticate)) {
-    return new Authenticate(key, opts);
+    return new Authenticate(key, max);
   }
   Transform.call(this);
-  var saltLen = 16;
-  var salt = crypto.randomBytes(saltLen);
-  this.push(salt);
-  this._cache = new Buffer('');
-  this._iv = void 0;
-  if (typeof opts === 'number') {
-    opts = {
-      max: opts
-    };
+  if (key.length < 16) {
+    throw new TypeError('key must be at lest 128 bits');
   }
-  opts = opts || {};
-  this._minChunkSize = opts.min || 16;
-  this._maxChunkSize = opts.max || 4 * 1024;
+  this._iv = new Buffer(key.length);
+  key.copy(this._iv);
+  if (typeof aad === 'number') {
+    max = aad;
+    aad = void 0;
+  }
+  aad = aad || new Buffer('');
+  this._maxChunkSize = max || 4 * 1024;
   this._algo = 'sha256';
-  var self = this;
-  var iv = crypto.pbkdf2Sync(key, salt, 500, 32);
-  this.setupIv = function (cb) {
-    self._iv = iv;
-    var hmac = crypto.createHmac(self._algo, self._iv);
-    var chunk = new Buffer(4);
-    chunk.writeUInt32BE(self._maxChunkSize, 0);
-    hmac.update(chunk);
-    self.push(hmac.digest());
-    self.push(chunk);
-    utils.incr32(self._iv);
-    cb();
-  };
-
+  this._len = 0;
+  var hmac = crypto.createHmac(this._algo, this._iv);
+  hmac.update(aad);
+  var block = new Buffer(8);
+  block.writeUInt32BE(aad.length, 0);
+  block.writeUInt32BE(this._maxChunkSize, 4);
+  hmac.update(block);
+  this.push(hmac.digest());
+  this.push(block);
+  utils.incr32(this._iv);
 }
-Authenticate.prototype._transform = function (chunk, _, next) {
-  var self = this;
-  this._cache = Buffer.concat([this._cache, chunk]);
-  if (this._cache.length < this._minChunkSize) {
-    return next();
-  }
-  if (!this._iv) {
-    return this.setupIv(function () {
-      self._drainCache(next);
-    });
-  }
-  return this._drainCache(next);
-};
-Authenticate.prototype._drainCache = function (next) {
+Authenticate.prototype._transform = function (data, _, next) {
   var chunk;
-  while (this._cache.length >= this._maxChunkSize) {
-    chunk = this._cache.slice(0, this._maxChunkSize);
-    this._cache = this._cache.slice(this._maxChunkSize);
+  this._len += data.length;
+  while (data.length >= this._maxChunkSize) {
+    chunk = data.slice(0, this._maxChunkSize);
+    data = data.slice(this._maxChunkSize);
     this._sendChunk(chunk);
   }
-  if (this._cache.length) {
-    chunk = this._cache;
-    this._cache = new Buffer('');
+  if (data.length) {
+    chunk = data;
     this._sendChunk(chunk);
   }
   next();
 };
-Authenticate.prototype._sendChunk = function (chunk, final) {
+Authenticate.prototype._sendChunk = function (chunk) {
     var hmac = crypto.createHmac(this._algo, this._iv);
     var header = new Buffer(4);
     header.writeUInt32BE(chunk.length, 0);
-    if (final) {
-      //hmac.update(this._endTag);
-      header[0] += 128;
-    }
-
     hmac.update(header);
-
     hmac.update(chunk);
     var out = hmac.digest();
     this.push(out);
@@ -84,13 +59,13 @@ Authenticate.prototype._sendChunk = function (chunk, final) {
     utils.incr32(this._iv);
 };
 Authenticate.prototype._flush = function (next) {
-  var self = this;
-  if (!this._iv) {
-    return this.once('iv-ready', function () {
-      self._flush(next);
-    });
-  }
-  this._sendChunk(this._cache, true);
+  var chunk = new Buffer(4);
+  chunk.fill(0xff);
+  var lenChunk = new Buffer(4);
+  lenChunk.writeUInt32BE(this._len, 0);
+  var hmac = crypto.createHmac(this._algo, this._iv);
+  this.push(hmac.update(lenChunk).digest());
+  this.push(chunk);
   utils.fill(this._iv, 0);
   next();
 };
