@@ -1,5 +1,5 @@
 function incr32(iv) {
-  var len = iv.length;
+  var len = iv.length - 1;
   var item;
   while (len--) {
     item = iv.readUInt8(len);
@@ -31,3 +31,47 @@ function fill(buff, value) {
   }
 }
 exports.fill = fill;
+function numberOfBytes(num) {
+  if (num < 255) {
+    return 1;
+  }
+  if (num < 65535) {
+    return 2;
+  }
+  return 4;
+}
+exports.numberOfBytes = numberOfBytes;
+
+function createHeader(size, val){
+  var out = new Buffer(size);
+  out.fill(0);
+  var offset = 7;
+  while (size--) {
+    out[size]= val % (1 << offset);
+    offset+=8;
+  }
+  return out;
+}
+exports.createHeader = createHeader;
+function createHeader(size, val){
+  var out = new Buffer(size);
+  if (size === 1) {
+    out.writeUInt8(val, 0);
+  } else if (size === 2) {
+    out.writeUInt16BE(val, 0);
+  } else {
+    out.writeUInt32BE(val, 0);
+  }
+  return out;
+}
+exports.createHeader = createHeader;
+function readHeader(size, header){
+  if (size === 1) {
+    return header.readUInt8(0);
+  } else if (size === 2) {
+    return header.readUInt16BE(0);
+  } else {
+    return header.readUInt32BE(0);
+  }
+}
+exports.readHeader = readHeader;

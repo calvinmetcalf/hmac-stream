@@ -12,7 +12,8 @@ function Authenticate(key, aad, max) {
   if (key.length < 16) {
     throw new TypeError('key must be at lest 128 bits');
   }
-  this._iv = new Buffer(key.length);
+  this._iv = new Buffer(key.length + 8);
+  this._iv.fill(0);
   key.copy(this._iv);
   if (typeof aad === 'number') {
     max = aad;
@@ -20,6 +21,7 @@ function Authenticate(key, aad, max) {
   }
   aad = aad || new Buffer('');
   this._maxChunkSize = max || 4 * 1024;
+  this._headerSize = utils.numberOfBytes(this._maxChunkSize);
   this._algo = 'sha256';
   this._len = 0;
   var hmac = crypto.createHmac(this._algo, this._iv);
@@ -48,8 +50,7 @@ Authenticate.prototype._transform = function (data, _, next) {
 };
 Authenticate.prototype._sendChunk = function (chunk) {
     var hmac = crypto.createHmac(this._algo, this._iv);
-    var header = new Buffer(4);
-    header.writeUInt32BE(chunk.length, 0);
+    var header = utils.createHeader(this._headerSize, chunk.length);
     hmac.update(header);
     hmac.update(chunk);
     var out = hmac.digest();
@@ -59,7 +60,7 @@ Authenticate.prototype._sendChunk = function (chunk) {
     utils.incr32(this._iv);
 };
 Authenticate.prototype._flush = function (next) {
-  var chunk = new Buffer(4);
+  var chunk = new Buffer(this._headerSize);
   chunk.fill(0xff);
   var lenChunk = new Buffer(4);
   lenChunk.writeUInt32BE(this._len, 0);

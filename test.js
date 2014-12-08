@@ -49,43 +49,61 @@ test('works2', function (t) {
   auther.write(data2);
   auther.end();
 });
+test('works3', function (t) {
+  t.plan(1);
+  var data1 = new Buffer(16);
+  data1.fill(8);
+  var data2 = new Buffer(16);
+  data2.fill(4);
+  var key = new Buffer(16);
+  key.fill(8);
+  var auther = new auth.Authenticate(key, 16);
+  var val = new auth.Verify(key);
+  var out = '';
+  out += val.update(auther.update(data1)).toString('hex');
+  out += val.update(auther.update(data2)).toString('hex');
+  out += val.update(auther.final()).toString('hex');
+  out += val.final().toString('hex');
+  t.equals(Buffer.concat([data1, data2]).toString('hex'), out);
+});
+
+test('errors', function (t) {
+  t.plan(1);
+  var data1 = new Buffer(16);
+  data1.fill(8);
+  var data2 = new Buffer(16);
+  data2.fill(4);
+  var key = new Buffer(16);
+  key.fill(8);
+  var auther = new auth.Authenticate(key, 16);
+  var val = new auth.Verify(key);
+  var out = '';
+  out += val.update(auther.update(data1)).toString('hex');
+  out += val.update(auther.update(data2)).toString('hex');
+  t.throws(val.final.bind(val), /Error/,'throws');
+});
+test('errors2', function (t) {
+  t.plan(1);
+  var data1 = new Buffer(16);
+  data1.fill(8);
+  var data2 = new Buffer(16);
+  data2.fill(4);
+  var data3 =  new Buffer(50);
+  data3.fill(1);
+  var key = new Buffer(16);
+  key.fill(8);
+  var auther = new auth.Authenticate(key, 16);
+  var val = new auth.Verify(key);
+  var out = '';
+  out += val.update(auther.update(data1)).toString('hex');
+  out += val.update(auther.update(data2)).toString('hex');
+  t.throws(val.update.bind(val,data3), /Error/,'throws');
+});
 function getBuffer(len) {
   var b = new Buffer(len);
   b.fill(len);
   return b;
 }
-test('min size', function (t) {
-  t.test('should work', function (t) {
-    t.plan(2);
-    var key = new Buffer(16);
-    key.fill(8);
-    var auther = new auth.Authenticate(key);
-    var i = 3;
-    var out = [];
-    auther.on('data', function (d) {
-      out.push(d);
-    });
-    auther.write(getBuffer(8));
-    t.equals(out.length, 1, 'nothing in there');
-    auther.write(getBuffer(9));
-    t.equals(out.length, 6, 'something in there');
-  });
-  t.test('should be able to turn it off', function (t) {
-    t.plan(2);
-    var key = new Buffer(16);
-    key.fill(8);
-    var auther = new auth.Authenticate(key, {min: 1});
-    var i = 3;
-    var out = [];
-    auther.on('data', function (d) {
-      out.push(d);
-    });
-    auther.write(getBuffer(8));
-    t.equals(out.length, 6, 'nothing in there');
-    auther.write(getBuffer(9));
-    t.equals(out.length, 9, 'something in there');
-  });
-});
 test('errors if the last chunk is lost', function (t) {
   t.plan(1);
   var data1 = new Buffer(32);
@@ -108,12 +126,16 @@ test('errors if the last chunk is lost', function (t) {
   var ended = false;
   auther.on('data', function (d) {
     if(ended === true) {
+      //console.log('after end', d);
       return;
     }
     val.write(d);
     if (d.toString('hex') === '04040404040404040404040404040404') {
+      //console.log('ending');
       ended = true;
-      val.end();
+      val.end(function (err){
+        //console.log('ended', err);
+      });
     }
     auterData = Buffer.concat([auterData, d]);
   });
@@ -186,7 +208,7 @@ test('errors if the chunks are swaped', function (t) {
   }).on('finish', function () {
     t.equals(out.toString('hex'), data1.toString('hex'), 'did not emit too much');
   }).on('error', function (e) {
-    t.equals(e.message, 'invalid block size', 'should error');
+    t.equals(e.message, 'invalid chunk size', 'should error');
   });
   var auterData  = new Buffer('');
   var ended = false;
@@ -267,7 +289,7 @@ function manipulateData(name, trans) {
       var out = '';
       var error = false;
       val.on('data', function (d) {
-      }).on('end', function () {
+      }).on('finish', function () {
         t.ok(true, 'done');
       }).on('error', function (e) {
         error = true;
@@ -289,7 +311,7 @@ function manipulateData(name, trans) {
       auther.end();
     });
     t.test('bad chunk size', function (t) {
-      t.plan(2);
+      t.plan(1);
       var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
       var key = new Buffer(16);
       key.fill(8);
@@ -298,10 +320,8 @@ function manipulateData(name, trans) {
       var out = '';
       var error = false;
       val.on('data', function (d) {
-      }).on('end', function () {
-        t.ok(true, 'done');
       }).on('error', function (e) {
-        error = true;
+        error=true;
         t.ok(true, 'errored');
       });
       var i = 0;
@@ -313,40 +333,7 @@ function manipulateData(name, trans) {
           return;
         }
         val.write(d);
-      }).on('finish', function () {
-        val.end();
-      });
-      auther.write(new Buffer(data));
-      auther.end();
-    });
-    t.test('bad salt', function (t) {
-      t.plan(2);
-      var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
-      var key = new Buffer(16);
-      key.fill(8);
-      var auther = new auth.Authenticate(key);
-      var val = new auth.Verify(key);
-      var out = '';
-      var error = false;
-      val.on('data', function (d) {
       }).on('end', function () {
-        t.ok(true, 'done');
-      }).on('error', function (e) {
-        error = true;
-        t.ok(true, 'errored');
-      });
-      var i = 0;
-      auther.on('data', function (d) {
-        //console.log(i, d.toString('hex'));
-        if (++i === 1) {
-          d = trans(d);
-          //console.log('trans', d.toString('hex'));
-        }
-        if (error) {
-          return;
-        }
-        val.write(d);
-      }).on('finish', function () {
         val.end();
       });
       auther.write(new Buffer(data));
