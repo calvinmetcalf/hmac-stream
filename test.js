@@ -203,12 +203,16 @@ test('errors if the chunks are swaped', function (t) {
   var auther = new auth.Authenticate(key, 16);
   var val = new auth.Verify(key);
   var out = new Buffer('');
+  var error = false;
   val.on('data', function (d) {
     out = Buffer.concat([out, d]);
   }).on('finish', function () {
     t.equals(out.toString('hex'), data1.toString('hex'), 'did not emit too much');
   }).on('error', function (e) {
-    t.equals(e.message, 'invalid chunk size', 'should error');
+    if (!error) {
+      error = true;
+      t.equals(e.message, 'invalid chunk size', 'should error');
+    }
   });
   var auterData  = new Buffer('');
   var ended = false;
@@ -292,8 +296,10 @@ function manipulateData(name, trans) {
       }).on('finish', function () {
         t.ok(true, 'done');
       }).on('error', function (e) {
-        error = true;
-        t.ok(true, 'errored');
+        if (!error) {
+          error = true;
+          t.ok(true, 'errored');
+        }
       });
       var i = 0;
       auther.on('data', function (d) {
@@ -321,8 +327,10 @@ function manipulateData(name, trans) {
       var error = false;
       val.on('data', function (d) {
       }).on('error', function (e) {
-        error=true;
-        t.ok(true, 'errored');
+        if (!error) {
+          error = true;
+          t.ok(true, 'errored');
+        }
       });
       var i = 0;
       auther.on('data', function (d) {
@@ -352,8 +360,10 @@ function manipulateData(name, trans) {
       }).on('finish', function () {
         t.ok(true, 'done');
       }).on('error', function (e) {
-        error = true;
-        t.ok(true, 'errored');
+        if (!error) {
+          error = true;
+          t.ok(true, 'errored');
+        }
       });
       var i = 0;
       auther.on('data', function (d) {

@@ -100,7 +100,7 @@ Verify.prototype._stateMachine = function (next) {
         this.push(data);
         break;
       default: 
-        return next();
+        return next(new Error('invalid state'));
     }
   }
 };
