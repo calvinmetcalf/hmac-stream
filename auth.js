@@ -62,8 +62,7 @@ Authenticate.prototype._sendChunk = function (chunk) {
 Authenticate.prototype._flush = function (next) {
   var chunk = new Buffer(this._headerSize);
   chunk.fill(0xff);
-  var lenChunk = new Buffer(4);
-  lenChunk.writeUInt32BE(this._len, 0);
+  var lenChunk = utils.createHeader(this._headerSize, 0);
   var hmac = crypto.createHmac(this._algo, this._iv);
   this.push(hmac.update(lenChunk).digest());
   this.push(chunk);

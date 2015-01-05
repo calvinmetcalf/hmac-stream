@@ -13,14 +13,6 @@ function Verify(key, aad) {
   }
   Transform.call(this);
   var self = this;
-  this.once('error', function (e) {
-    self._error = e;
-    if (!self.listeners('error').length) {
-      process.nextTick(function () {
-        throw e;
-      });
-    }
-  });
   aad = aad || new Buffer('');
   this._iv = new Buffer(key.length + 8);
   this._iv.fill(0);
@@ -52,7 +44,7 @@ Verify.prototype._stateMachine = function (next) {
     this._aadHash.update(maxBlockSize);
     if (utils.compare(this._aadHash.digest(), aadHash)) {
       utils.fill(this._iv, 0);
-      return this._throwError(new Error('bad header'), next);
+      return next(new Error('bad header'));
     }
     this._maxChunkSize = maxBlockSize.readUInt32BE(0);
 
@@ -68,16 +60,17 @@ Verify.prototype._stateMachine = function (next) {
         if (this._cache.length < this._hashSize + this._headerSize) {
           return next();
         }
-        if (this._cache[this._hashSize] === 0xff) {
+        header = this._cache.slice(this._hashSize, this._hashSize + this._headerSize);
+        if (utils.allFF(header)) {
           return this._final(next);
         }
         this._currentHash = this._cache.slice(0, this._hashSize);
-        header = this._cache.slice(this._hashSize, this._hashSize + this._headerSize);
+        
         this._chunkSize = utils.readHeader(this._headerSize, header);
         if (this._chunkSize > this._maxChunkSize) {
           utils.fill(this._iv, 0);
           this._vstate = 3;
-          return this._throwError(new Error('invalid chunk size'), next);
+          return next(new Error('invalid chunk size'));
         }
         this._cache = this._cache.slice(this._hashSize + this._headerSize);
         this._vstate = 2;
@@ -101,13 +94,13 @@ Verify.prototype._stateMachine = function (next) {
         if (utils.compare(hmac.digest(), this._currentHash)) {
           utils.fill(this._iv, 0);
           this._vstate = 4;
-          return this._throwError(new Error('bad data'), next);
+          return next(new Error('bad data'));
         }
         this._len += data.length;
         this.push(data);
         break;
       default: 
-        return this._throwError(new Error('should not get here'), next);
+        return next();
     }
   }
 };
@@ -116,14 +109,14 @@ Verify.prototype._final = function(next) {
   if (this._cache.length > this._hashSize  + this._headerSize) {
     utils.fill(this._iv, 0);
     this._vstate = 5;
-    return this._throwError(new Error('too much data'), next);
+    return next(new Error('too much data'));
   }
   var hash = this._cache.slice(0, this._hashSize);
   var hmac = crypto.createHmac(this._algo, this._iv);
   utils.fill(this._iv, 0);
-  if (utils.compare(hmac.update(makeBlock(this._len)).digest(), hash)) {
+  if (utils.compare(hmac.update(utils.createHeader(this._headerSize, 0)).digest(), hash)) {
     this._vstate = 6;
-    return this._throwError(new Error('missing data'), next);
+    return next(new Error('missing data'));
   }
   next();
 };
@@ -133,18 +126,13 @@ function makeBlock(num) {
   return out;
 }
 Verify.prototype._transform = function (chunk, _, next) {
-  if (this._error) {
-    return next();
-  }
   this._cache = Buffer.concat([this._cache, chunk]);
   this._stateMachine(next);
 };
 Verify.prototype._flush = function (next) {
-  if (this._error) {
-    return next();
-  }
-  if (!this._flushed) {
-    return this._throwError(new Error('missing data'), next);
+  if (!this._flushed && this._vstate < 3) {
+    this._vstate = 7;
+    return next(new Error('missing data'));
   }
   return next();
 };

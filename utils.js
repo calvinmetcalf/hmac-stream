@@ -44,17 +44,6 @@ exports.numberOfBytes = numberOfBytes;
 
 function createHeader(size, val){
   var out = new Buffer(size);
-  out.fill(0);
-  var offset = 7;
-  while (size--) {
-    out[size]= val % (1 << offset);
-    offset+=8;
-  }
-  return out;
-}
-exports.createHeader = createHeader;
-function createHeader(size, val){
-  var out = new Buffer(size);
   if (size === 1) {
     out.writeUInt8(val, 0);
   } else if (size === 2) {
@@ -75,3 +64,14 @@ function readHeader(size, header){
   }
 }
 exports.readHeader = readHeader;
+function allFF(buf) {
+  var len = buf.length;
+  var i = -1;
+  while (++i < len) {
+    if (buf[i] !== 0xff) {
+      return false;
+    }
+  }
+  return true;
+}
+exports.allFF = allFF;
