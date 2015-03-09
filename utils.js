@@ -13,16 +13,22 @@ function incr32(iv) {
   }
 }
 exports.incr32 = incr32;
-function compare(a, b) {
+function areDifferent(a, b) {
+  // constant time equals
+  // will leak size of secrete
+  // not an issue here as it's always 32 bytes
   var i = -1;
-  var len = Math.min(a.length, b.length);
-  var out = Math.abs(a.length - b.length);
+  var len = 32;
+  var out = 0;
+  if (a.length !== len || a.length !== b.length) {
+    return true;
+  }
   while (++i < len) {
-    out += (a[i] ^ b[i]);
+    out |= (a[i] ^ b[i]);
   }
   return out;
 }
-exports.compare = compare;
+exports.areDifferent = areDifferent;
 function fill(buff, value) {
   var i = -1;
   var len = buff.length;
@@ -64,14 +70,14 @@ function readHeader(size, header){
   }
 }
 exports.readHeader = readHeader;
-function allFF(buf) {
+function allZero(buf) {
   var len = buf.length;
   var i = -1;
   while (++i < len) {
-    if (buf[i] !== 0xff) {
+    if (buf[i] !== 0) {
       return false;
     }
   }
   return true;
 }
-exports.allFF = allFF;
+exports.allZero = allZero;

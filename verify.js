@@ -14,7 +14,7 @@ function Verify(key, aad) {
   Transform.call(this);
   var self = this;
   aad = aad || new Buffer('');
-  this._iv = new Buffer(key.length + 8);
+  this._iv = new Buffer(key.length);
   this._iv.fill(0);
   key.copy(this._iv);
   this._algo = 'sha256';
@@ -29,10 +29,14 @@ function Verify(key, aad) {
   this._headerSize = void 0;
   this._aadHash = crypto.createHmac(this._algo, this._iv);
   this._aadHash.update(aad);
-  this._aadHash.update(makeBlock(aad.length));
+  this._aadHash.update(makeAADLength(aad.length, new Buffer(4)));
   utils.incr32(this._iv);
 }
 
+function makeAADLength(num, out) {
+  out.writeUInt32BE(num, 0);
+  return out;
+}
 Verify.prototype._stateMachine = function (next) {
   if (this._vstate === 0) {
     if (this._cache.length < this._hashSize + 8) {
@@ -42,16 +46,17 @@ Verify.prototype._stateMachine = function (next) {
     var aadsize = this._cache.slice(this._hashSize, this._hashSize + 4);
     var maxBlockSize = this._cache.slice(this._hashSize + 4, this._hashSize + 8);
     this._aadHash.update(maxBlockSize);
-    if (utils.compare(this._aadHash.digest(), aadHash)) {
+    if (utils.areDifferent(this._aadHash.digest(), aadHash)) {
       utils.fill(this._iv, 0);
+      this._aadHash = null;
       return next(new Error('bad header'));
     }
+    this._aadHash = null;
     this._maxChunkSize = maxBlockSize.readUInt32BE(0);
 
     this._cache = this._cache.slice(this._hashSize + 8);
     this._headerSize = utils.numberOfBytes(this._maxChunkSize);
     this._vstate = 1;
-    this.addHash = null;
   }
   var data, hmac, header;
   while (true) {
@@ -61,7 +66,7 @@ Verify.prototype._stateMachine = function (next) {
           return next();
         }
         header = this._cache.slice(this._hashSize, this._hashSize + this._headerSize);
-        if (utils.allFF(header)) {
+        if (utils.allZero(header)) {
           return this._final(next);
         }
         this._currentHash = this._cache.slice(0, this._hashSize);
@@ -91,7 +96,7 @@ Verify.prototype._stateMachine = function (next) {
         hmac.update( utils.createHeader(this._headerSize, this._chunkSize));
         this._chunkSize = 0;
         hmac.update(data);
-        if (utils.compare(hmac.digest(), this._currentHash)) {
+        if (utils.areDifferent(hmac.digest(), this._currentHash)) {
           utils.fill(this._iv, 0);
           this._vstate = 4;
           return next(new Error('bad data'));
@@ -114,17 +119,13 @@ Verify.prototype._final = function(next) {
   var hash = this._cache.slice(0, this._hashSize);
   var hmac = crypto.createHmac(this._algo, this._iv);
   utils.fill(this._iv, 0);
-  if (utils.compare(hmac.update(utils.createHeader(this._headerSize, 0)).digest(), hash)) {
+  if (utils.areDifferent(hmac.update(utils.createHeader(this._headerSize, 0)).digest(), hash)) {
     this._vstate = 6;
     return next(new Error('missing data'));
   }
   next();
 };
-var out = new Buffer(4);
-function makeBlock(num) {
-  out.writeUInt32BE(num, 0);
-  return out;
-}
+
 Verify.prototype._transform = function (chunk, _, next) {
   this._cache = Buffer.concat([this._cache, chunk]);
   this._stateMachine(next);

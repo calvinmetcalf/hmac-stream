@@ -1,3 +1,4 @@
+'use strict';
 var Transform = require('./cipherbase');
 var crypto = require('crypto');
 var inherits = require('inherits');
@@ -12,7 +13,7 @@ function Authenticate(key, aad, max) {
   if (key.length < 16) {
     throw new TypeError('key must be at lest 128 bits');
   }
-  this._iv = new Buffer(key.length + 8);
+  this._iv = new Buffer(key.length);
   this._iv.fill(0);
   key.copy(this._iv);
   if (typeof aad === 'number') {
@@ -61,7 +62,7 @@ Authenticate.prototype._sendChunk = function (chunk) {
 };
 Authenticate.prototype._flush = function (next) {
   var chunk = new Buffer(this._headerSize);
-  chunk.fill(0xff);
+  chunk.fill(0);
   var lenChunk = utils.createHeader(this._headerSize, 0);
   var hmac = crypto.createHmac(this._algo, this._iv);
   this.push(hmac.update(lenChunk).digest());

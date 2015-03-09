@@ -1,7 +1,8 @@
+'use strict';
 var test = require('tape');
 var crypto = require('crypto');
 var auth = require('./');
-
+var utils = require('./utils');
 test('works', function (t) {
   t.plan(2);
   var data = 'If you consent, neither you nor any other human being shall ever see us again; I will go to the vast wilds of South America.  My food is not that of man; I do not destroy the lamb and the kid to glut my appetite; acorns and berries afford me sufficient nourishment.  My companion will be of the same nature as myself and will be content with the same fare. We shall make our bed of dried leaves; the sun will shine on us as on man and will ripen our food.  The picture I present to you is peaceful and human, and you must feel that you could deny it only in the wantonness of power and cruelty.  Pitiless as you have been towards me, I now see compassion in your eyes; let me seize the favourable moment and persuade you to promise what I so ardently desire.';
@@ -382,3 +383,19 @@ function manipulateData(name, trans) {
     });
   });
 }
+test('unit', function (t){
+  t.test('is different', function (t){
+    t.plan(4);
+    var a = new Buffer(32);
+    var b = new Buffer(32);
+    a.fill(8);
+    b.fill(8);
+    t.notOk(utils.areDifferent(a, b), 'confirm 2 similar ones');
+    b[1] = 7;
+    t.ok(utils.areDifferent(a, b), 'reject 2 different ones');
+    var c = new Buffer(33);
+    c.fill(8);
+    t.ok(utils.areDifferent(a, c), 'reject incorrect sizes');
+    t.ok(utils.areDifferent(c, a), 'reject incorrect sizes');
+  });
+});
