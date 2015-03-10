@@ -5,6 +5,8 @@ A streaming hmac authenticator, the idea being for use in an 'Encrypt-then-MAC' 
 
 ```js
 var hmacStream = require('hmac-stream')
+var authenticator = new hmacStream.Authenticate('key');
+var verifier = new hmacStream.Verify('key');
 dataSource.pipe(cipher).pipe(authenticator).pipe(outStream);
 //then
 inStream.pipe(verifier).pipe(decipher).pipe(doStuff);
@@ -81,8 +83,8 @@ being able to do a DDOS against you.
 ```js
 var hmacStream = require('hmac-stream');
 
-createCipher.Authenticate(key, aad, maxSize);
-createCipher.Verify(key, aad);
+hmacStream.Authenticate(key, aad, maxSize);
+hmacStream.Verify(key, aad);
 ```
 
 - password: key must be at least 128 bits (16 bytes)
