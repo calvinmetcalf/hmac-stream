@@ -21,18 +21,15 @@ function Authenticate(key, aad, max) {
     aad = void 0;
   }
   aad = aad || new Buffer('');
-  this._maxChunkSize = max || 4 * 1024;
-  this._headerSize = utils.numberOfBytes(this._maxChunkSize);
+  this._maxChunkSize = max || Infinity;
   this._algo = 'sha256';
   this._len = 0;
   var hmac = crypto.createHmac(this._algo, this._iv);
   hmac.update(aad);
-  var block = new Buffer(8);
+  var block = new Buffer(4);
   block.writeUInt32BE(aad.length, 0);
-  block.writeUInt32BE(this._maxChunkSize, 4);
   hmac.update(block);
   this.push(hmac.digest());
-  this.push(block);
   utils.incr32(this._iv);
 }
 Authenticate.prototype._transform = function (data, _, next) {
@@ -50,22 +47,26 @@ Authenticate.prototype._transform = function (data, _, next) {
   next();
 };
 Authenticate.prototype._sendChunk = function (chunk) {
-    var hmac = crypto.createHmac(this._algo, this._iv);
-    var header = utils.createHeader(this._headerSize, chunk.length);
-    hmac.update(header);
-    hmac.update(chunk);
-    var out = hmac.digest();
-    this.push(out);
-    this.push(header);
-    this.push(chunk);
-    utils.incr32(this._iv);
+  var header = new Buffer(4);
+  header.writeUInt32BE(chunk.length, 0);
+  var headerTag = crypto.createHmac(this._algo, this._iv)
+    .update(header)
+    .digest();
+  this.push(headerTag);
+  this.push(header);
+  utils.incr32(this._iv);
+  var tag = crypto.createHmac(this._algo, this._iv)
+    .update(chunk)
+    .digest();
+  this.push(tag);
+  this.push(chunk);
+  utils.incr32(this._iv);
 };
 Authenticate.prototype._flush = function (next) {
   var chunk = new Buffer(this._headerSize);
   chunk.fill(0);
-  var lenChunk = utils.createHeader(this._headerSize, 0);
   var hmac = crypto.createHmac(this._algo, this._iv);
-  this.push(hmac.update(lenChunk).digest());
+  this.push(hmac.update(chunk).digest());
   this.push(chunk);
   utils.fill(this._iv, 0);
   next();
