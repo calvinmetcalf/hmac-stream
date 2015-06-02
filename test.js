@@ -198,7 +198,7 @@ test('errors if the chunks are swaped', function (t) {
   var data3 = new Buffer(16);
   data3.fill(6);
   var data4 = new Buffer(16);
-  data3.fill(8);
+  data4.fill(8);
   var key = new Buffer(16);
   key.fill(8);
   var auther = new auth.Authenticate(key, 16);
@@ -212,7 +212,7 @@ test('errors if the chunks are swaped', function (t) {
   }).on('error', function (e) {
     if (!error) {
       error = true;
-      t.equals(e.message, 'invalid chunk size', 'should error');
+      t.equals(e.message, 'bad data', 'should error');
     }
   });
   var auterData  = new Buffer('');

@@ -1,3 +1,4 @@
+'use strict';
 function incr32(iv) {
   var len = iv.length - 1;
   var item;
@@ -14,6 +15,9 @@ function incr32(iv) {
 }
 exports.incr32 = incr32;
 function areDifferent(a, b) {
+  // console.log('check');
+  // console.log(a.toString('hex'));
+  // console.log(b.toString('hex'));
   // constant time equals
   // will leak size of secrete
   // not an issue here as it's always 32 bytes

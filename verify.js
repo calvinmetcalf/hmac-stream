@@ -3,6 +3,7 @@ var Transform = require('./cipherbase');
 var crypto = require('crypto');
 var inherits = require('inherits');
 var utils = require('./utils');
+var debug = require('debug')('streaming-hmac:verify');
 module.exports = Verify;
 inherits(Verify, Transform);
 function Verify(key, aad) {
@@ -63,6 +64,8 @@ Verify.prototype._stateMachine = function (next) {
           return this._final(next);
         }
         hash = this._cache.slice(0, this._hashSize);
+        debug('headerTag ' + hash.toString('hex'));
+        debug('header ' + header.toString('hex'));
         hmac = crypto.createHmac(this._algo, this._iv);
         utils.incr32(this._iv);
         hmac.update(header);
@@ -85,7 +88,9 @@ Verify.prototype._stateMachine = function (next) {
           return next();
         }
         hash = this._cache.slice(0, this._hashSize);
-        data = this._cache.slice(this._hashSize, this._chunkSize);
+        data = this._cache.slice(this._hashSize, this._hashSize + this._chunkSize);
+        debug('tag ' + hash.toString('hex'));
+        debug('chunk ' + data.toString('hex'));
         this._cache = this._cache.slice(this._hashSize + this._chunkSize);
 
         this._vstate = 1;

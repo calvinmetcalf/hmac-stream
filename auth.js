@@ -3,6 +3,8 @@ var Transform = require('./cipherbase');
 var crypto = require('crypto');
 var inherits = require('inherits');
 var utils = require('./utils');
+var debug = require('debug')('streaming-hmac:auth');
+
 module.exports = Authenticate;
 inherits(Authenticate, Transform);
 function Authenticate(key, aad, max) {
@@ -52,18 +54,23 @@ Authenticate.prototype._sendChunk = function (chunk) {
   var headerTag = crypto.createHmac(this._algo, this._iv)
     .update(header)
     .digest();
+  debug('headerTag ' + headerTag.toString('hex'));
   this.push(headerTag);
+  debug('header ' + header.toString('hex'));
   this.push(header);
   utils.incr32(this._iv);
   var tag = crypto.createHmac(this._algo, this._iv)
     .update(chunk)
     .digest();
+  debug('tag ' + tag.toString('hex'));
+
   this.push(tag);
   this.push(chunk);
+  debug('chunk ' +  chunk.toString('hex'))
   utils.incr32(this._iv);
 };
 Authenticate.prototype._flush = function (next) {
-  var chunk = new Buffer(this._headerSize);
+  var chunk = new Buffer(4);
   chunk.fill(0);
   var hmac = crypto.createHmac(this._algo, this._iv);
   this.push(hmac.update(chunk).digest());
