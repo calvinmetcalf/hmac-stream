@@ -14,28 +14,25 @@ inStream.pipe(verifier).pipe(decipher).pipe(doStuff);
 
 cipher and decipher can be any stream that needs to be authenticated.
 
-procedure: 
+procedure:
 
-- take a key, aad, and a MAX CHUNK SIZE
-    - if MAX CHUNK SIZE is undefined default to 4k
+- take a key, aad, and MAX CHUNK SIZE
     - if aad is undefined default to an empty buffer
     - if key is less then 128 bits (aka 16 bytes) throw an error.
-- create an 8 byte block, the first 4 bytes are the aad length, the second 4 bytes
-    are the MAX CHUNK SIZE encoded as big endian 32 bit unsigned integers. 
+    - if MAX CHUNK SIZE is undefined default it to Infinity
+- create an 4 byte block of the aad length as a big endian 32 bit unsigned integers.
 - create an hmac for the aad and the previous block and emit it
-- emit the block
 - increment the key by 1
 - for each chunk
     - if chunk is larger then MAX CHUNK SIZE split into chunks of MAX CHUNK SIZE or less
-    - generate header which is sized depending on the MAX CHUNK SIZE such that
-        - if MAX CHUNK SIZE is 254 or less 1 byte
-        - if MAX CHUNK SIZE is 65534 or less 2 bytes
-        - else 4 bytes
+    - generate a header of 4 bytes
     - write the byte size of the chunk to the header
-    - generate and emit an hmac for the header plus chunk based on the current iv
+    - generate and emit an hmac for the header
     - emit the header
+    - increment the key by 1
+    - generate and emit an hmac for the data
     - emit the data
-    - increment the hmac by 1
+    - increment the key by 1
 - when done
     - emit an hmac and header for a chunk of size zero
 
@@ -46,27 +43,19 @@ To verify:
     - if key is less then 128 bits (aka 16 bytes) throw an error.
     - if aad is undefined default to an empty buffer.
 - accept initial information
-    - first 16 bytes of stream will be hmac for aad and chunk size
-    - next 4 bytes will be MAX CHUNK SIZE
-    - create hmac of aad, add aad length as 32 bit BE buffer, add 4 byte MAX CHUNK SIZE
+    - first 32 bytes of stream will be hmac for aad
+    - create hmac of aad, add aad length as 32 bit BE buffer
     - verify against aad received
-    - set MAX CHUNK SIZE
-    - set HEADER SIZE based on MAX CHUNK SIZE
 - then
-    - wait for 32 bytes this is the hmac
-    - wait for HEADER SIZE number of bytes
-    - read header
-        - if header contains a length greater then MAX CHUNK SIZE, throw error.
-        - if header contains a length of zero then verify against hmac
-            - if it verifies then end stream
-            - if not throw error
-        - else set this as CHUNK SIZE
-        - increment key
-    - wait for CHUNK SIZE number of bytes
-        - create hmac of chunk size and chunk then verify
-            - if it verifies emit chunk
-            - if not throw error
-        - increment key
+    - wait for 32 + 4 bytes this is the hmac plus chunk len
+    - verify chunk length
+      - if verifies set chunk length
+      - else throw error
+    - if chunk length is zero stream is ended
+    - wait for 32 + chunk length
+    - verify chunk
+      - if verified emit chunk
+      - else throw error
 
 It should throw errors if
   - any data is modified
@@ -98,3 +87,4 @@ hmacStream.Verify(key, aad);
 - 1.0.0: add end tag to guard against the last block being dropped
 - 2.0.0: added variable block sizes
 - 3.0.0: takes a key instead of a password, supports aad, treats end tags differently.
+- 4.0.0: chunk length is mac'd separately. 

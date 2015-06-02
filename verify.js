@@ -60,9 +60,6 @@ Verify.prototype._stateMachine = function (next) {
           return next();
         }
         header = this._cache.slice(this._hashSize, this._hashSize + 4);
-        if (utils.allZero(header)) {
-          return this._final(next);
-        }
         hash = this._cache.slice(0, this._hashSize);
         debug('headerTag ' + hash.toString('hex'));
         debug('header ' + header.toString('hex'));
@@ -77,6 +74,9 @@ Verify.prototype._stateMachine = function (next) {
         }
 
         this._chunkSize = header.readUInt32BE(0);
+        if (this._chunkSize === 0) {
+          return this._final(next);
+        }
         this._cache = this._cache.slice(this._hashSize + 4);
         this._vstate = 2;
         if (this._cache.length < this._chunkSize + this._hashSize) {
@@ -118,15 +118,7 @@ Verify.prototype._final = function(next) {
     this._vstate = 5;
     return next(new Error('too much data'));
   }
-  var hash = this._cache.slice(0, this._hashSize);
-  var hmac = crypto.createHmac(this._algo, this._iv);
   utils.fill(this._iv, 0);
-  var empty = new Buffer(4);
-  empty.fill(0);
-  if (utils.areDifferent(hmac.update(empty).digest(), hash)) {
-    this._vstate = 6;
-    return next(new Error('missing data'));
-  }
   next();
 };
 
