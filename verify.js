@@ -1,9 +1,10 @@
 'use strict';
 var Transform = require('./cipherbase');
-var crypto = require('crypto');
 var inherits = require('inherits');
 var utils = require('./utils');
 var debug = require('debug')('streaming-hmac:verify');
+var createHmac = require('create-hmac');
+
 module.exports = Verify;
 inherits(Verify, Transform);
 function Verify(key, aad) {
@@ -26,7 +27,7 @@ function Verify(key, aad) {
   this._cache = new Buffer('');
   this._len = 0;
   this._flushed = false;
-  this._aadHash = crypto.createHmac(this._algo, this._iv);
+  this._aadHash = createHmac(this._algo, this._iv);
   this._aadHash.update(aad);
   this._aadHash.update(makeAADLength(aad.length, new Buffer(4)));
   utils.incr32(this._iv);
@@ -63,7 +64,7 @@ Verify.prototype._stateMachine = function (next) {
         hash = this._cache.slice(0, this._hashSize);
         debug('headerTag ' + hash.toString('hex'));
         debug('header ' + header.toString('hex'));
-        hmac = crypto.createHmac(this._algo, this._iv);
+        hmac = createHmac(this._algo, this._iv);
         utils.incr32(this._iv);
         hmac.update(header);
 
@@ -94,7 +95,7 @@ Verify.prototype._stateMachine = function (next) {
         this._cache = this._cache.slice(this._hashSize + this._chunkSize);
 
         this._vstate = 1;
-        hmac = crypto.createHmac(this._algo, this._iv);
+        hmac = createHmac(this._algo, this._iv);
         utils.incr32(this._iv);
         this._chunkSize = 0;
         hmac.update(data);

@@ -1,3 +1,4 @@
+'use strict';
 var inherits = require('inherits');
 
 var Transform = require('readable-stream').Transform;

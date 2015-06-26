@@ -1,9 +1,9 @@
 'use strict';
 var Transform = require('./cipherbase');
-var crypto = require('crypto');
 var inherits = require('inherits');
 var utils = require('./utils');
 var debug = require('debug')('streaming-hmac:auth');
+var createHmac = require('create-hmac');
 
 module.exports = Authenticate;
 inherits(Authenticate, Transform);
@@ -26,7 +26,7 @@ function Authenticate(key, aad, max) {
   this._maxChunkSize = max || Infinity;
   this._algo = 'sha256';
   this._len = 0;
-  var hmac = crypto.createHmac(this._algo, this._iv);
+  var hmac = createHmac(this._algo, this._iv);
   hmac.update(aad);
   var block = new Buffer(4);
   block.writeUInt32BE(aad.length, 0);
@@ -51,7 +51,7 @@ Authenticate.prototype._transform = function (data, _, next) {
 Authenticate.prototype._sendChunk = function (chunk) {
   var header = new Buffer(4);
   header.writeUInt32BE(chunk.length, 0);
-  var headerTag = crypto.createHmac(this._algo, this._iv)
+  var headerTag = createHmac(this._algo, this._iv)
     .update(header)
     .digest();
   debug('headerTag ' + headerTag.toString('hex'));
@@ -59,20 +59,20 @@ Authenticate.prototype._sendChunk = function (chunk) {
   debug('header ' + header.toString('hex'));
   this.push(header);
   utils.incr32(this._iv);
-  var tag = crypto.createHmac(this._algo, this._iv)
+  var tag = createHmac(this._algo, this._iv)
     .update(chunk)
     .digest();
   debug('tag ' + tag.toString('hex'));
 
   this.push(tag);
   this.push(chunk);
-  debug('chunk ' +  chunk.toString('hex'))
+  debug('chunk ' + chunk.toString('hex'));
   utils.incr32(this._iv);
 };
 Authenticate.prototype._flush = function (next) {
   var chunk = new Buffer(4);
   chunk.fill(0);
-  var hmac = crypto.createHmac(this._algo, this._iv);
+  var hmac = createHmac(this._algo, this._iv);
   this.push(hmac.update(chunk).digest());
   this.push(chunk);
   utils.fill(this._iv, 0);
