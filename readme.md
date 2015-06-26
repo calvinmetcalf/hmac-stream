@@ -78,7 +78,7 @@ hmacStream.Verify(key, aad);
 
 - password: key must be at least 128 bits (16 bytes)
 - aad: any additional data to authenticate
-- maxSize: maximum size of a chunk, defaults to 4k.
+- maxSize: maximum size of a chunk, defaults to Infinity.
 
 
 # Versions
@@ -87,4 +87,5 @@ hmacStream.Verify(key, aad);
 - 1.0.0: add end tag to guard against the last block being dropped
 - 2.0.0: added variable block sizes
 - 3.0.0: takes a key instead of a password, supports aad, treats end tags differently.
-- 4.0.0: chunk length is mac'd separately. 
+- 4.0.0: chunk length is mac'd separately.
+- 4.0.2: fix dependencies to work better in the browser
