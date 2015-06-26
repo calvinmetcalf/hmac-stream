@@ -1,6 +1,6 @@
 {
   "name": "hmac-stream",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "streaming HMACs",
   "main": "index.js",
   "scripts": {
